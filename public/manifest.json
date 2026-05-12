@@ -1,0 +1,16 @@
+{
+  "name": "Para Ti 💌",
+  "short_name": "Para Ti",
+  "description": "Links que quiero que veas",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fafaf9",
+  "theme_color": "#f43f5e",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

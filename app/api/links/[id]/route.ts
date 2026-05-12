@@ -15,7 +15,6 @@ export async function PATCH(
   const updateData: Record<string, unknown> = {}
 
   if (typeof body.is_read === 'boolean') {
-    // Actualiza solo la columna del usuario actual
     const isHusband = session.user.role === 'husband'
     const readField = isHusband ? 'read_by_husband' : 'read_by_wife'
     const timeField = isHusband ? 'read_at_husband' : 'read_at_wife'
@@ -34,10 +33,17 @@ export async function PATCH(
 
   const isHusband = session.user.role === 'husband'
   return NextResponse.json({
-    ...data,
+    id: data.id,
+    url: data.url,
+    title: data.title,
+    description: data.description,
+    category: data.category,
     added_by: data.added_by ?? 'husband',
     is_read: isHusband ? (data.read_by_husband ?? false) : (data.read_by_wife ?? false),
     other_read: isHusband ? (data.read_by_wife ?? false) : (data.read_by_husband ?? false),
+    my_read_at: isHusband ? data.read_at_husband : data.read_at_wife,
+    created_at: data.created_at,
+    image_url: data.image_url ?? '',
   })
 }
 
