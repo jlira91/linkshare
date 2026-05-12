@@ -15,8 +15,12 @@ export async function PATCH(
   const updateData: Record<string, unknown> = {}
 
   if (typeof body.is_read === 'boolean') {
-    updateData.is_read = body.is_read
-    updateData.read_at = body.is_read ? new Date().toISOString() : null
+    // Actualiza solo la columna del usuario actual
+    const isHusband = session.user.role === 'husband'
+    const readField = isHusband ? 'read_by_husband' : 'read_by_wife'
+    const timeField = isHusband ? 'read_at_husband' : 'read_at_wife'
+    updateData[readField] = body.is_read
+    updateData[timeField] = body.is_read ? new Date().toISOString() : null
   }
 
   const { data, error } = await supabase
@@ -27,7 +31,14 @@ export async function PATCH(
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+
+  const isHusband = session.user.role === 'husband'
+  return NextResponse.json({
+    ...data,
+    added_by: data.added_by ?? 'husband',
+    is_read: isHusband ? (data.read_by_husband ?? false) : (data.read_by_wife ?? false),
+    other_read: isHusband ? (data.read_by_wife ?? false) : (data.read_by_husband ?? false),
+  })
 }
 
 export async function DELETE(

@@ -6,9 +6,10 @@ export type Link = {
   title: string
   description: string
   category: string
-  is_read: boolean
+  added_by: string        // 'husband' | 'wife'
+  is_read: boolean        // si el usuario actual lo leyó
+  other_read: boolean     // si la otra persona lo leyó
   created_at: string
-  read_at: string | null
   image_url: string
 }
 

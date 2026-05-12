@@ -32,11 +32,12 @@ function timeAgo(dateStr: string): string {
 
 type Props = {
   link: Link
+  mode: 'received' | 'sent'
   onToggleRead: (id: string, isRead: boolean) => void
   onDelete: (id: string) => void
 }
 
-export default function LinkCard({ link, onToggleRead, onDelete }: Props) {
+export default function LinkCard({ link, mode, onToggleRead, onDelete }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const hostname = (() => {
@@ -44,11 +45,15 @@ export default function LinkCard({ link, onToggleRead, onDelete }: Props) {
     catch { return '' }
   })()
 
-  const faviconUrl = hostname ? `https://www.google.com/s2/favicons?domain=${hostname}&sz=32` : null
+  const faviconUrl = hostname
+    ? `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`
+    : null
+
+  const isUnread = mode === 'received' && !link.is_read
 
   return (
     <div className={`bg-white rounded-2xl shadow-sm border transition-all ${
-      link.is_read ? 'border-stone-100 opacity-70' : 'border-stone-200'
+      isUnread ? 'border-rose-200' : 'border-stone-100 opacity-80'
     }`}>
       <a
         href={link.url}
@@ -56,12 +61,11 @@ export default function LinkCard({ link, onToggleRead, onDelete }: Props) {
         rel="noopener noreferrer"
         className="block p-4"
         onClick={() => {
-          if (!link.is_read) onToggleRead(link.id, true)
+          if (mode === 'received' && !link.is_read) onToggleRead(link.id, true)
         }}
       >
         {/* Top row */}
         <div className="flex items-start gap-3">
-          {/* Image or favicon */}
           {link.image_url ? (
             <img
               src={link.image_url}
@@ -78,12 +82,22 @@ export default function LinkCard({ link, onToggleRead, onDelete }: Props) {
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <h3 className={`font-semibold leading-snug line-clamp-2 ${
-                link.is_read ? 'text-stone-500' : 'text-stone-800'
+                isUnread ? 'text-stone-800' : 'text-stone-500'
               }`}>
                 {link.title}
               </h3>
-              {!link.is_read && (
+              {/* Indicador por modo */}
+              {mode === 'received' && isUnread && (
                 <span className="w-2 h-2 rounded-full bg-rose-500 flex-shrink-0 mt-1.5" />
+              )}
+              {mode === 'sent' && (
+                <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 font-medium ${
+                  link.other_read
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-stone-100 text-stone-500'
+                }`}>
+                  {link.other_read ? 'Visto ✓' : 'Sin abrir'}
+                </span>
               )}
             </div>
             {link.description && (
@@ -106,26 +120,32 @@ export default function LinkCard({ link, onToggleRead, onDelete }: Props) {
 
       {/* Actions */}
       <div className="flex border-t border-stone-100">
-        <button
-          onClick={() => onToggleRead(link.id, !link.is_read)}
-          className="flex-1 py-3 text-sm font-medium transition-colors text-center rounded-bl-2xl"
-          style={{ color: link.is_read ? '#78716c' : '#10b981' }}
-        >
-          {link.is_read ? '↩ Marcar sin leer' : '✓ Marcar como leído'}
-        </button>
+        {mode === 'received' ? (
+          <button
+            onClick={() => onToggleRead(link.id, !link.is_read)}
+            className="flex-1 py-3 text-sm font-medium transition-colors text-center rounded-bl-2xl"
+            style={{ color: link.is_read ? '#78716c' : '#10b981' }}
+          >
+            {link.is_read ? '↩ Marcar sin leer' : '✓ Marcar como leído'}
+          </button>
+        ) : (
+          <div className="flex-1 py-3 text-sm text-stone-400 text-center">
+            {link.other_read ? '👀 Ya lo vio' : '⏳ Esperando...'}
+          </div>
+        )}
         <div className="w-px bg-stone-100" />
         {confirmDelete ? (
           <div className="flex flex-1">
             <button
               onClick={() => setConfirmDelete(false)}
-              className="flex-1 py-3 text-sm font-medium text-stone-500 transition-colors text-center"
+              className="flex-1 py-3 text-sm font-medium text-stone-500 text-center"
             >
               Cancelar
             </button>
             <div className="w-px bg-stone-100" />
             <button
               onClick={() => onDelete(link.id)}
-              className="flex-1 py-3 text-sm font-medium text-red-500 transition-colors text-center rounded-br-2xl"
+              className="flex-1 py-3 text-sm font-medium text-red-500 text-center rounded-br-2xl"
             >
               Borrar
             </button>
