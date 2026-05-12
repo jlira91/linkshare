@@ -47,7 +47,7 @@ export default function LinksClient({ userName, userRole }: Props) {
   const [showRead, setShowRead] = useState(true)
   const [search, setSearch] = useState('')
   const [showSearch, setShowSearch] = useState(false)
-  const [pushStatus, setPushStatus] = useState<'idle' | 'granted' | 'denied'>('idle')
+  const [pushStatus, setPushStatus] = useState<'idle' | 'granted' | 'denied' | 'unsupported'>('idle')
 
   const fetchLinks = useCallback(async () => {
     const res = await fetch('/api/links')
@@ -57,12 +57,26 @@ export default function LinksClient({ userName, userRole }: Props) {
 
   useEffect(() => { fetchLinks() }, [fetchLinks])
 
-  // Registrar push notifications al cargar
+  // Verificar estado de notificaciones al cargar (sin pedirlas automáticamente)
   useEffect(() => {
-    registerPush()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    checkPushStatus()
   }, [])
 
+  async function checkPushStatus() {
+    if (typeof window === 'undefined') return
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      setPushStatus('unsupported')
+      return
+    }
+    const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+    if (!vapidKey) { setPushStatus('unsupported'); return }
+
+    if (Notification.permission === 'granted') setPushStatus('granted')
+    else if (Notification.permission === 'denied') setPushStatus('denied')
+    // Si es 'default', dejamos 'idle' para mostrar el botón
+  }
+
+  // Llamado cuando el usuario toca el botón — iOS requiere gesto del usuario
   async function registerPush() {
     if (typeof window === 'undefined') return
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
@@ -168,10 +182,18 @@ export default function LinksClient({ userName, userRole }: Props) {
               {unreadCount > 0
                 ? <span className="text-rose-500 font-medium">{unreadCount} sin ver</span>
                 : <span className="text-green-500 font-medium">todo visto ✓</span>}
-              {pushStatus === 'denied' && (
-                <span className="ml-1 text-amber-500">· notif. bloqueadas</span>
-              )}
             </p>
+            {pushStatus === 'idle' && (
+              <button
+                onClick={registerPush}
+                className="text-xs text-rose-500 font-medium mt-0.5 flex items-center gap-1"
+              >
+                🔔 Activar notificaciones
+              </button>
+            )}
+            {pushStatus === 'denied' && (
+              <p className="text-xs text-amber-500 mt-0.5">🔕 Notificaciones bloqueadas — actívalas en Configuración</p>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <button
