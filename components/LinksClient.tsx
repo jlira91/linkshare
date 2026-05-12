@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Link } from '@/lib/supabase'
 import LinkCard from './LinkCard'
@@ -48,6 +48,11 @@ export default function LinksClient({ userName, userRole }: Props) {
   const [search, setSearch] = useState('')
   const [showSearch, setShowSearch] = useState(false)
   const [pushStatus, setPushStatus] = useState<'idle' | 'granted' | 'denied' | 'unsupported'>('idle')
+  const [pullDistance, setPullDistance] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
+  const pullStartY = useRef(0)
+  const mainRef = useRef<HTMLElement>(null)
+  const PULL_THRESHOLD = 65
 
   const fetchLinks = useCallback(async () => {
     const res = await fetch('/api/links')
@@ -56,6 +61,41 @@ export default function LinksClient({ userName, userRole }: Props) {
   }, [])
 
   useEffect(() => { fetchLinks() }, [fetchLinks])
+
+  // Pull-to-refresh
+  useEffect(() => {
+    const main = mainRef.current
+    if (!main) return
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (main.scrollTop === 0) pullStartY.current = e.touches[0].clientY
+    }
+    const onTouchMove = (e: TouchEvent) => {
+      if (!pullStartY.current || refreshing) return
+      const dy = e.touches[0].clientY - pullStartY.current
+      if (dy > 0) setPullDistance(Math.min(dy * 0.45, PULL_THRESHOLD + 15))
+    }
+    const onTouchEnd = async () => {
+      if (pullDistance >= PULL_THRESHOLD) {
+        setRefreshing(true)
+        setPullDistance(0)
+        await fetchLinks()
+        setRefreshing(false)
+      } else {
+        setPullDistance(0)
+      }
+      pullStartY.current = 0
+    }
+
+    main.addEventListener('touchstart', onTouchStart, { passive: true })
+    main.addEventListener('touchmove', onTouchMove, { passive: true })
+    main.addEventListener('touchend', onTouchEnd)
+    return () => {
+      main.removeEventListener('touchstart', onTouchStart)
+      main.removeEventListener('touchmove', onTouchMove)
+      main.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [fetchLinks, pullDistance, refreshing, PULL_THRESHOLD])
 
   // Verificar estado de notificaciones al cargar (sin pedirlas automáticamente)
   useEffect(() => {
@@ -319,7 +359,20 @@ export default function LinksClient({ userName, userRole }: Props) {
       </div>
 
       {/* Lista */}
-      <main className="flex-1 max-w-lg mx-auto w-full px-4 py-4 pb-24">
+      <main ref={mainRef} className="flex-1 max-w-lg mx-auto w-full px-4 pb-24 overflow-y-auto">
+        {/* Indicador pull-to-refresh */}
+        <div
+          className="flex items-center justify-center transition-all overflow-hidden"
+          style={{ height: refreshing ? 48 : pullDistance > 0 ? pullDistance : 0 }}
+        >
+          <div className={`flex items-center gap-2 text-sm text-stone-500 ${refreshing ? 'opacity-100' : pullDistance >= PULL_THRESHOLD ? 'opacity-100' : 'opacity-60'}`}>
+            <div className={`w-5 h-5 border-2 border-rose-300 border-t-rose-500 rounded-full ${refreshing ? 'animate-spin' : ''}`}
+              style={{ transform: refreshing ? undefined : `rotate(${Math.min(pullDistance / PULL_THRESHOLD, 1) * 360}deg)` }}
+            />
+            <span>{refreshing ? 'Actualizando...' : pullDistance >= PULL_THRESHOLD ? 'Suelta para actualizar' : 'Jala para actualizar'}</span>
+          </div>
+        </div>
+        <div className="pt-4">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-stone-400">
             <div className="w-8 h-8 border-2 border-rose-300 border-t-rose-500 rounded-full animate-spin mb-3" />
@@ -393,6 +446,7 @@ export default function LinksClient({ userName, userRole }: Props) {
             </div>
           )
         )}
+        </div>
       </main>
 
       {/* FAB */}
