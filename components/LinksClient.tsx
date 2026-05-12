@@ -198,15 +198,13 @@ export default function LinksClient({ userName, userRole }: Props) {
       </main>
 
       {/* FAB - only husband can add */}
-      {userRole === 'husband' && (
-        <button
-          onClick={() => setShowAdd(true)}
-          className="fixed bottom-6 right-4 w-14 h-14 bg-rose-500 hover:bg-rose-600 active:scale-95 text-white rounded-full shadow-lg flex items-center justify-center text-2xl transition-all z-30 safe-bottom"
-          aria-label="Agregar link"
-        >
-          +
-        </button>
-      )}
+      <button
+        onClick={() => setShowAdd(true)}
+        className="fixed bottom-6 right-4 w-14 h-14 bg-rose-500 hover:bg-rose-600 active:scale-95 text-white rounded-full shadow-lg flex items-center justify-center text-2xl transition-all z-30 safe-bottom"
+        aria-label="Agregar link"
+      >
+        +
+      </button>
 
       {showAdd && (
         <AddLinkModal
